@@ -51,7 +51,6 @@ public class JogosController {
 			}
 			if (botao.equals("Quartas")) {
 				jogosQuartas = jDao.getQuartas();
-				System.out.println(jogosQuartas);
 			}
 		} catch (ClassNotFoundException | SQLException e) {
 			erro = e.getMessage();

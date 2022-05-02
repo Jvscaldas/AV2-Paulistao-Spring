@@ -153,6 +153,7 @@ public class JogosDao implements IJogosDao {
 			r.setDerrotas(rs.getInt("derrotas"));
 			r.setGolsMarcados(rs.getInt("golsMarcados"));
 			r.setGolsSofridos(rs.getInt("golsSofridos"));
+			r.setSaldoGols(rs.getInt("saldoGols"));
 			r.setPontos(rs.getInt("pontos"));
 
 			classificacao.add(r);
