@@ -294,6 +294,8 @@ BEGIN
 		RAISERROR('Impossível modificar a tabela jogos!', 16, 1)
 END
 --------------------------------------------------------------------------------------------------------------------------------------------
+-- EXIBE UMA CLASSIFICACAO GERAL DA COMPETICAO
+-- FUNCTION QUE IRA AUXILIAR A fn_grupos
 CREATE alter FUNCTION fn_campeonato()
 RETURNS @tabela TABLE(
 			codigoTime INT,
@@ -358,6 +360,8 @@ BEGIN
 SELECT * FROM fn_campeonato() ORDER BY pontos DESC, vitorias DESC, golsMarcados , saldoGols DESC
 DROP FUNCTION fn_campeonato
 --------------------------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION QUE IRA DEFINIR A SITUACAO DOS TIMES
+-- EXECUTADA PELA PROCEDURE sp_gruposFinal
 CREATE ALTER FUNCTION fn_grupos(@grupo CHAR(1))
 RETURNS @tabela TABLE(
 			codigoTime INT,
@@ -388,44 +392,45 @@ BEGIN
 			@estado VARCHAR(15)
 			SET @contador = 1
 		
-			WHILE (SELECT COUNT(*) FROM @tabela) <= 5 AND @contador <= 16
+		WHILE (SELECT COUNT(*) FROM @tabela) <= 5 AND @contador <= 16
 		BEGIN
-		IF NOT EXISTS(SELECT codigoTime FROM Grupos WHERE
-		 grupo = @grupo AND codigoTime = @contador)
-		 BEGIN
+		IF NOT EXISTS(SELECT codigoTime FROM Grupos 
+			WHERE grupo = @grupo AND codigoTime = @contador)
+		BEGIN
 			SET @contador = @contador + 1
-		 END
-		 ELSE IF EXISTS(SELECT codigoTime FROM Grupos WHERE
-		 grupo = @grupo AND codigoTime = @contador)
-		 BEGIN
-		 SET @nomeTime = (SELECT nomeTime FROM Times WHERE codigoTime = @contador)
+		END
+		ELSE IF EXISTS(SELECT codigoTime FROM Grupos 
+			WHERE grupo = @grupo AND codigoTime = @contador)
+		BEGIN
+			SET @nomeTime = (SELECT nomeTime FROM Times WHERE codigoTime = @contador)
 			SET @numeroJogosDisputados = (SELECT COUNT(*) FROM Jogos
 										WHERE (codigoTimeA = @contador OR codigoTimeB = @contador) AND
 										(golsTimeA IS NOT NULL AND golsTimeB IS NOT NULL))
 										
-		SET @vitorias = (SELECT COUNT(*) FROM Jogos WHERE (codigoTimeA = @contador AND golsTimeA > golsTimeB) OR
+			SET @vitorias = (SELECT COUNT(*) FROM Jogos WHERE (codigoTimeA = @contador AND golsTimeA > golsTimeB) OR
 															(codigoTimeB = @contador AND golsTimeA < golsTimeB))
-		SET @pontos = @vitorias * 3
-		SET @empates = (SELECT COUNT(*) FROM Jogos WHERE (codigoTimeA = @contador AND golsTimeA = golsTimeB) OR
+			SET @pontos = @vitorias * 3
+			SET @empates = (SELECT COUNT(*) FROM Jogos WHERE (codigoTimeA = @contador AND golsTimeA = golsTimeB) OR
 															(codigoTimeB = @contador AND golsTimeA = golsTimeB))
-		SET @pontos = @pontos + @empates
-		SET @derrotas = (SELECT COUNT(*) FROM Jogos WHERE (codigoTimeA = @contador AND golsTimeA < golsTimeB) OR
+			SET @pontos = @pontos + @empates
+			SET @derrotas = (SELECT COUNT(*) FROM Jogos WHERE (codigoTimeA = @contador AND golsTimeA < golsTimeB) OR
 															(codigoTimeB = @contador AND golsTimeA > golsTimeB))
 		
-		SET @golsMarcados = (SELECT ISNULL(SUM(golsTimeA),0) FROM Jogos WHERE codigoTimeA = @contador AND golsTimeA IS NOT NULL) +
+			SET @golsMarcados = (SELECT ISNULL(SUM(golsTimeA),0) FROM Jogos WHERE codigoTimeA = @contador AND golsTimeA IS NOT NULL) +
 													 (SELECT ISNULL(SUM(golsTimeB),0) FROM Jogos WHERE
 													  codigoTimeB = @contador AND golsTimeB IS NOT NULL)
 													  
-		SET @golsSofridos = (SELECT  ISNULL(SUM(golsTimeB),0) FROM Jogos WHERE codigoTimeA = @contador AND golsTimeB IS NOT NULL ) +
+			SET @golsSofridos = (SELECT  ISNULL(SUM(golsTimeB),0) FROM Jogos WHERE codigoTimeA = @contador AND golsTimeB IS NOT NULL ) +
 													 (SELECT ISNULL(SUM(golsTimeA),0) FROM Jogos WHERE
 													  codigoTimeB = @contador AND golsTimeB IS NOT NULL )
-			IF EXISTS(SELECT * FROM Auxiliar WHERE codigoTime = @contador) 
-			BEGIN
-				SET @estado = 'REBAIXADO'
-			END
-			ELSE IF NOT EXISTS(SELECT * FROM Auxiliar WHERE codigoTime = @contador)
-			BEGIN
-				SET @estado = 'PERMANECE'
+
+		IF EXISTS(SELECT * FROM Auxiliar WHERE codigoTime = @contador) 
+		BEGIN
+			SET @estado = 'REBAIXADO'
+		END
+		ELSE IF NOT EXISTS(SELECT * FROM Auxiliar WHERE codigoTime = @contador)
+		BEGIN
+			SET @estado = 'PERMANECE'
 		END
 		
 		SET @saldoGols = @golsMarcados - @golsSofridos
@@ -435,9 +440,10 @@ BEGIN
 		 SET @contador = @contador + 1
 		END
 		END
-		RETURN
-		END
-
+RETURN
+END
+--------------------------------------------------------------------------------------------------------------------------------------------
+-- EXECUTA A FUNCTION fn_grupos()
 CREATE ALTER PROCEDURE sp_gruposFinal(@grupo CHAR(1))
 AS
 CREATE TABLE Auxiliar(codigoTime INT)
@@ -453,14 +459,14 @@ EXEC sp_gruposFinal 'B'
 EXEC sp_gruposFinal 'C'
 
 EXEC sp_gruposFinal 'D'
-
-SELECT * FROM jogos
 --------------------------------------------------------------------------------------------------------------------------------------------
 CREATE TABLE quartas (
 		Grupo CHAR(1),
 		Mandante VARCHAR(MAX),
 		Visitante VARCHAR(MAX)
 		)
+--------------------------------------------------------------------------------------------------------------------------------------------
+-- DEFINE AS PROJECOES DE QUARTAS DE FINAL
 CREATE PROCEDURE sp_quartas
 AS
 BEGIN
@@ -515,5 +521,4 @@ END
 
 EXEC sp_quartas
 
-SELECT * FROM Jogos
 SELECT * FROM quartas
